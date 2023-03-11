@@ -43,7 +43,9 @@ END = 'end'
 CASE = 'case'
 ENDCASE = 'endcase'
 DEFAULT = 'default'
-OPERATOR = ''
+
+#symbols, operators and delimiters
+OPERATOR = 'ops'
 COMMA = ','
 LPAREN = '('
 RPAREN = ')'
@@ -51,6 +53,13 @@ LBRACE = '{'
 RBRACE = '}'
 EQUALS = '='
 INT = 'int'
+EOF = 'eof'
+STRING = 'str'
+INVALID = 'inv'
+DISPLAY = '$display'
+LSHIFT = '<<'
+RSHIFT = '>>'
+NEWLINE = '\n'
 
 # regex for various kind of tokens
 TOKENS = [
@@ -74,10 +83,16 @@ TOKENS = [
     (ENDFUNCTION, r'endfunction'),
     (INTEGER, r'integer'),
     (REAL, r'real'),
-    (TIME, r'time')
-    (INT, r'\d+'),
+    (TIME, r'time'),
+    (DISPLAY, r'\$display'),
+    (INT, r'-?\d+'),
+    (INT, r'-?0x[\d]+'),
+    (INT, r'-?\d*\'b[0-1]*'),
+    (INT, r'-?\d*\'[oO][0-7]*'),
+    (INT, r'-?\d*\'[hH][0-9a-fA-F][0-9a-fA-F_]*'),
+    (INT, r'-?\d*\'[dD][0-9]*'),
     (IDENTIFIER, r'[a-zA-Z_][a-zA-Z0-9_$]*'),
-    (OPERATOR, r'[+\-*/%]'),
+    (OPERATOR, r'[+\-*/%^]'),
     (LPAREN, r'\('),
     (RPAREN, r'\)'),
     (LBRACE, r'\{'),
@@ -87,6 +102,11 @@ TOKENS = [
     (COLON, r':'),
     (LRANGE, r'\['),
     (RRANGE, r'\]'),
+    (EQUALS, r'='),
+    (STRING, r'\".*\"'),
+    (LSHIFT, r'<<'),
+    (RSHIFT, r'>>'),
+    (NEWLINE, r'\n'),
+    (INVALID, r'.*'),
     (None, None),
-    (EQUALS, r'=')
 ]
