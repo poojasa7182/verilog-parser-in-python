@@ -27,16 +27,20 @@ class VerilogSyntaxAnalyser:
     def parse_data_type(self):
         # signed data type not included
         data_type = ''
-
+        dimensions = []
         if self.lexer.get_current_token().token_type in [REAL, TIME, INTEGER]:
             data_type = self.lexer.get_current_token().value
         elif self.lexer.get_current_token().token_type in [REG, WIRE]:
             data_type = self.lexer.get_current_token().value
-            dimensions = []
-            while self.lexer.get_next_token().token_type == LRANGE:
+            if self.lexer.get_next_token().token_type == LRANGE:
                 dimensions.append(self.parse_expression())
                 if self.lexer.get_current_token().token_type != RRANGE:
                     raise ValueError('Expected "]" after array dimension')
+            self.lexer.get_next_token()
+        elif self.lexer.get_current_token().token_type == LRANGE:
+            dimensions.append(self.parse_expression())
+            if self.lexer.get_current_token().token_type != RRANGE:
+                raise ValueError('Expected "]" after array dimension')
             self.lexer.get_next_token()
         else:
             return None
@@ -66,24 +70,27 @@ class VerilogSyntaxAnalyser:
                 break
             else:
                 direction = None
-                if token.token_type in [INPUT, OUTPUT, INOUT]:
-                    direction = token.token_type
-                    token = self.lexer.get_next_token().token_type
-                    self.lexer.get_next_token()
-                    data_type = self.parse_data_type()
 
-                    # if self.lexer.get_current_token() == '[':
-                    #     port_size = self.parse_expression()
-                    #     if self.lexer.get_next_token() != ']':
-                    #         raise ValueError('Expected "]" after port size')
-                    #     data_type = {'type': 'array',
-                    #                  'base_type': data_type, 'size': port_size}
+                port_name = self.parse_in_out_declaration()
+                # if token.token_type in [INPUT, OUTPUT, INOUT]:
+                #     direction = token.token_type
+                #     token = self.lexer.get_next_token().token_type
+                #     # self.lexer.get_next_token()
+                #     # print(self.lexer.get_current_token().value)
+                #     data_type = self.parse_data_type()
+                #     # print(data_type)
+                #     # if self.lexer.get_current_token() == '[':
+                #     #     port_size = self.parse_expression()
+                #     #     if self.lexer.get_next_token() != ']':
+                #     #         raise ValueError('Expected "]" after port size')
+                #     #     data_type = {'type': 'array',
+                #     #                  'base_type': data_type, 'size': port_size}
 
-                if self.lexer.get_current_token().token_type != IDENTIFIER:
-                    raise ValueError('Expected port identifier')
-                port_name = self.lexer.get_current_token().value
-                ports.append(
-                    {'name': port_name, 'direction': direction, 'data_type': data_type})
+                # if self.lexer.get_current_token().token_type != IDENTIFIER:
+                #     raise ValueError('Expected port identifier')
+                # port_name = self.lexer.get_current_token().value
+                # ports.append(
+                #     {'name': port_name, 'direction': direction, 'data_type': data_type})
 
                 if self.lexer.get_next_token().token_type == COMMA:
                     continue
@@ -91,9 +98,11 @@ class VerilogSyntaxAnalyser:
                     break
                 else:
                     raise ValueError('Expected "," or ")" in port list')
-
-        if token.token_type != RPAREN:
+                
+        if self.lexer.get_current_token().token_type != RPAREN:
             raise ValueError('Expected ")" after port list')
+        
+        self.lexer.get_next_token()
 
         return ports
 
@@ -123,21 +132,40 @@ class VerilogSyntaxAnalyser:
         return {'names': parameter_names, 'values': parameter_values}
 
     def parse_expression(self):
-        pass
+        dimensions = []
+        token = self.lexer.get_next_token()
+        if token.token_type != INT and token.token_type != IDENTIFIER:
+            raise ValueError('Incorrect values')
+        dimensions.append(token.value)
+        token = self.lexer.get_next_token()
+        if token.token_type == OPERATOR:
+            dimensions.append(token.value)
+            token = self.lexer.get_next_token()
+            if token.token_type != INT and token.token_type != IDENTIFIER:
+                raise ValueError('Incorrect values')
+            dimensions.append(token.value)
+            self.lexer.get_next_token()
+        if self.lexer.get_current_token().token_type != COLON:
+            raise ValueError('Expected :')
+        dimensions.append(self.lexer.get_current_token().value)
+        token = self.lexer.get_next_token()
+        if token.token_type != INT and token.token_type != IDENTIFIER:
+            raise ValueError('Incorrect values')
+        dimensions.append(self.lexer.get_current_token().value)
+        self.lexer.get_next_token()
+        return dimensions
 
-    def parse_input_declaration(self):
-        pass
+    def parse_in_out_declaration(self):
+        self.lexer.get_next_token()
+        data = self.parse_data_type()
+        if self.lexer.get_current_token().token_type != IDENTIFIER:
+            raise ValueError('Expected port identifier')
+        port_name = self.lexer.get_current_token().value
 
-    def parse_output_declaration(self):
-        pass
+        return port_name
 
-    def parse_inout_declaration(self):
-        pass
+    def parse_net_or_variables_declaration(self):
 
-    def parse_net_declaration(self):
-        pass
-
-    def parse_reg_declaration(self):
         pass
 
     def parse_integer_declaration(self):
@@ -206,20 +234,16 @@ class VerilogSyntaxAnalyser:
             elif token == MODULE:
                 raise ValueError('Unexpected module declaration')
                 break
+            elif token == ENDMODULE:
+                break
             elif token == SEMICOLON:
                 continue
             elif token == PARAMETER:
                 module_items.append(self.parse_parameter_declaration())
-            elif token == INPUT:
-                module_items.append(self.parse_input_declaration())
-            elif token == OUTPUT:
-                module_items.append(self.parse_output_declaration())
-            elif token == INOUT:
-                module_items.append(self.parse_inout_declaration())
-            elif token == NET:
-                module_items.append(self.parse_net_declaration())
-            elif token == REG:
-                module_items.append(self.parse_reg_declaration())
+            elif token == INPUT or token == OUTPUT or token == INOUT:
+                module_items.append(self.parse_in_out_declaration())
+            elif token == WIRE or token == REG:
+                module_items.append(self.parse_net_or_variables_declaration())
             elif token == INTEGER:
                 module_items.append(self.parse_integer_declaration())
             elif token == REAL:
@@ -246,3 +270,8 @@ class VerilogSyntaxAnalyser:
                 raise ValueError(
                     f'Unexpected token "{token}" in module declaration')
         # modules.append({'identifier': identifier, 'port_list': port_list, 'items': module_items})
+
+f = open("demofile.vlg", "r")
+lex_obj = VerilogSyntaxAnalyser(f.read())
+lex_obj.parse_verilog_code()
+# sl = VerilogSyntaxAnalyser()
