@@ -18,9 +18,8 @@ class VerilogParser:
                 break
             if token.token_type != NEWLINE:
                 pass
-        #         print(token.value, '->', token.token_type)
-        # print("comments:", self.lexer.comments)
-        # print("lexical errors:", self.lexer.errors)
+                print(token.value, '->', token.token_type)
+        print("comments:", self.lexer.comments)
 
         return self.lexer.errors, self.lexer.comments
 

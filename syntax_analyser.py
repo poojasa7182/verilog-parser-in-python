@@ -495,8 +495,3 @@ class VerilogSyntaxAnalyser:
         module_declaration = self.parse_module_declaration()
         module_body = self.parse_module_body()
         return self.errors
-
-
-# f = open("demofile.vlg", "r")
-# lex_obj = VerilogSyntaxAnalyser(f.read())
-# lex_obj.parse_verilog_code()

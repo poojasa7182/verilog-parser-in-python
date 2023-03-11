@@ -22,5 +22,3 @@ class Token:
                 value = match.group(0)
                 self.token_type = token_type
                 break
-        if not match:
-            raise SyntaxError('Invalid syntax')
