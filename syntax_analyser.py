@@ -30,13 +30,14 @@ class VerilogSyntaxAnalyser:
         dimensions = []
         if self.lexer.get_current_token().token_type in [REAL, TIME, INTEGER]:
             data_type = self.lexer.get_current_token().value
+            self.lexer.get_next_token()
         elif self.lexer.get_current_token().token_type in [REG, WIRE]:
             data_type = self.lexer.get_current_token().value
             if self.lexer.get_next_token().token_type == LRANGE:
                 dimensions.append(self.parse_expression())
                 if self.lexer.get_current_token().token_type != RRANGE:
                     raise ValueError('Expected "]" after array dimension')
-            self.lexer.get_next_token()
+                self.lexer.get_next_token()
         elif self.lexer.get_current_token().token_type == LRANGE:
             dimensions.append(self.parse_expression())
             if self.lexer.get_current_token().token_type != RRANGE:
@@ -98,10 +99,10 @@ class VerilogSyntaxAnalyser:
                     break
                 else:
                     raise ValueError('Expected "," or ")" in port list')
-                
+
         if self.lexer.get_current_token().token_type != RPAREN:
             raise ValueError('Expected ")" after port list')
-        
+
         self.lexer.get_next_token()
 
         return ports
@@ -128,7 +129,7 @@ class VerilogSyntaxAnalyser:
                 break
             else:
                 raise ValueError('Expected comma or semicolon')
-            
+
         return {'names': parameter_names, 'values': parameter_values}
 
     def parse_expression(self):
@@ -157,23 +158,64 @@ class VerilogSyntaxAnalyser:
 
     def parse_in_out_declaration(self):
         self.lexer.get_next_token()
-        data = self.parse_data_type()
-        if self.lexer.get_current_token().token_type != IDENTIFIER:
-            raise ValueError('Expected port identifier')
-        port_name = self.lexer.get_current_token().value
+        data_type = self.parse_data_type()
+        port_name = self.parse_identifier()
 
         return port_name
 
-    def parse_net_or_variables_declaration(self):
+    def parse_identifier(self):
+        if self.lexer.get_current_token().token_type != IDENTIFIER:
+            raise ValueError('Expected variable identifier')
+        identifier = self.lexer.get_current_token().value
 
-        pass
+        return identifier
 
-    def parse_integer_declaration(self):
-        pass
+    def parse_identifier_declaration(self):
+        identifier = self.lexer.get_current_token().value
 
-    def parse_real_declaration(self):
-        pass
+        expression = []
 
+        if self.lexer.get_next_token().token_type == EQUALS:        
+            expression = self.parse_complex_num_expression()
+            
+        if self.lexer.get_current_token().token_type != SEMICOLON:
+            raise ValueError('Expected ";" after identifier declaration')
+
+        return {identifier, expression}
+    
+    def parse_complex_num_expression(self):
+        expression = []
+        token = self.lexer.get_next_token()
+        lparam_count = 0
+        while not (token.token_type == NEWLINE or token.token_type== SEMICOLON):
+            if token.token_type == IDENTIFIER or token.token_type == INT or token.token_type == STRING:
+                if self.lexer.last_token.token_type in [RPAREN, IDENTIFIER, INT, STRING]:
+                    raise ValueError(f'Invalid expression - " {self.lexer.last_token.value} {token.value} " ')
+            if token.token_type == LPAREN:
+                if self.lexer.last_token.token_type not in [OPERATOR, LSHIFT, RSHIFT, EQUALS]:
+                    raise ValueError('Invalid expression, no operator before paranthesis')
+                lparam_count += 1
+            if token.token_type in [OPERATOR, LSHIFT, RSHIFT]:
+                if self.lexer.last_token.token_type in [LPAREN, OPERATOR, LSHIFT, RSHIFT, EQUALS] :
+                    raise ValueError('Invalid expression, operator not valid here')
+            if token.token_type == RPAREN:
+                if lparam_count <=0:
+                    raise ValueError('Invalid expression, no opening paranthesis')
+                lparam_count -= 1
+                if self.lexer.last_token.token_type in [OPERATOR, LSHIFT, RSHIFT, EQUALS]:
+                    raise ValueError('Invalid expression, operator before paranthesis')
+                
+            expression.append(token.value)
+            token = self.lexer.get_next_token()
+
+        if lparam_count != 0:
+            raise ValueError('Expected closing bracket')
+        
+        if token.token_type == NEWLINE:
+            raise ValueError('Semicolon expected at the end of expression')
+
+        return expression
+    
     def parse_time_declaration(self):
         pass
 
@@ -198,6 +240,26 @@ class VerilogSyntaxAnalyser:
     def parse_task_declaration(self):
         pass
 
+    def parse_net_declaration(self):
+        data_type = self.parse_data_type()
+        id = self.parse_identifier()
+        if self.lexer.get_next_token().token_type != SEMICOLON:
+            raise ValueError('Expected ";" after wire declaration')
+
+        return
+
+    def parse_reg_declaration(self):
+        data_type = self.parse_data_type()
+        id = self.parse_identifier()
+        if self.lexer.get_next_token().token_type == EQUALS:
+            if self.lexer.get_next_token().token_type != STRING:
+                raise ValueError('Expected string')
+            self.lexer.get_next_token()
+        if self.lexer.get_current_token().token_type != SEMICOLON:
+            raise ValueError('Expected ";" after reg declaration')
+
+        return
+
     def parse_function_declaration(self):
         self.lexer.get_next_token()
         return_type = self.parse_data_type()
@@ -209,7 +271,7 @@ class VerilogSyntaxAnalyser:
 
         port_list = self.parse_port_list()
 
-        if self.lexer.get_next_token() != SEMICOLON:
+        if self.lexer.get_next_token().token_type != SEMICOLON:
             raise ValueError('Expected ";" after function declaration')
 
         function_body = []
@@ -236,20 +298,24 @@ class VerilogSyntaxAnalyser:
                 break
             elif token == ENDMODULE:
                 break
-            elif token == SEMICOLON:
+            elif token == NEWLINE:
                 continue
             elif token == PARAMETER:
                 module_items.append(self.parse_parameter_declaration())
             elif token == INPUT or token == OUTPUT or token == INOUT:
                 module_items.append(self.parse_in_out_declaration())
-            elif token == WIRE or token == REG:
-                module_items.append(self.parse_net_or_variables_declaration())
-            elif token == INTEGER:
-                module_items.append(self.parse_integer_declaration())
-            elif token == REAL:
-                module_items.append(self.parse_real_declaration())
-            elif token == TIME:
-                module_items.append(self.parse_time_declaration())
+                if self.lexer.get_next_token().token_type != SEMICOLON:
+                    raise ValueError(f'Expected ";" after {token} declaration')
+            elif token == WIRE:
+                module_items.append(self.parse_net_declaration())
+            elif token == REG:
+                module_items.append(self.parse_reg_declaration())
+            elif token == INTEGER or token == REAL or token == TIME:
+                data_type = self.parse_data_type()
+                id = self.parse_identifier_declaration()
+                # module_items.append(self.parse_net_or_variables_declaration())
+            elif token == ASSIGN:
+                module_items.append(self.parse_assign_expression())
             elif token == EVENT:
                 module_items.append(self.parse_event_declaration())
             elif token == GATE_INSTANTIATION:
@@ -266,10 +332,13 @@ class VerilogSyntaxAnalyser:
                 module_items.append(self.parse_task_declaration())
             elif token == FUNCTION:
                 module_items.append(self.parse_function_declaration())
+            elif token == IDENTIFIER:
+                module_items.append(self.parse_identifier_declaration())
             else:
                 raise ValueError(
                     f'Unexpected token "{token}" in module declaration')
         # modules.append({'identifier': identifier, 'port_list': port_list, 'items': module_items})
+
 
 f = open("demofile.vlg", "r")
 lex_obj = VerilogSyntaxAnalyser(f.read())
