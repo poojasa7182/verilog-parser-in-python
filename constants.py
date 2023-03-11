@@ -5,6 +5,23 @@ Define constants in used in Verilog code
 
 WHITESPACE = ' \t\n\r'
 
+DELIMITERS = [' ',
+              '\n',
+              '\t',
+              '(',
+              ')',
+              '[',
+              ']',
+              '{',
+              '}',
+              ':',
+              ';',
+              ',',
+              '=',
+              '<',
+              '>',
+            ]
+
 SYMBOLS = '!@#$%^&*()_-+={}[]|\:;"<>,.?/~`'
 
 OPERATORS = ['+',
