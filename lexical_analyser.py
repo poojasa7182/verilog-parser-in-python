@@ -44,7 +44,7 @@ class VerilogLexer:
                 self.pos += 1
                 if self.code[self.pos] == '\n':
                     self.errors.append(
-                        {self.line_num, "Illegal for a string to be split into two lines"})
+                        {'line_num': self.line_num, 'error': "Illegal for a string to be split into two lines"})
                     break
 
             if self.code[self.pos] == "\"":
@@ -52,7 +52,7 @@ class VerilogLexer:
                 self.pos += 1
             self.current_token = Token(value)
             return self.current_token
-            
+
         elif self.code[self.pos] == "/" and self.code[self.pos] == self.code[self.pos+1]:
             value = ""
             while self.code[self.pos] != "\n":
@@ -60,7 +60,7 @@ class VerilogLexer:
                 self.pos += 1
             self.comments.append(value[2:])
             return self.get_next_token()
-        
+
         elif self.code[self.pos] == "/" and self.code[self.pos+1] == "*":
             value = ""
             while not (self.code[self.pos] == "*" and self.code[self.pos+1] == "/"):
@@ -70,7 +70,7 @@ class VerilogLexer:
                 self.pos += 1
                 if self.pos == len(self.code):
                     self.errors.append(
-                        {self.line_num+1, "Non terminating comment"})
+                        {'line_num': self.line_num+1, 'error': "Non terminating comment"})
                     return self.get_next_token()
             self.comments.append(value[2:])
             self.pos += 2
@@ -85,7 +85,7 @@ class VerilogLexer:
             if self.code[self.pos] == '>' and self.code[self.pos-1] == '>':
                 value += self.code[self.pos]
                 self.pos += 1
-            
+
             self.current_token = Token(value)
             return self.current_token
 
@@ -98,7 +98,7 @@ class VerilogLexer:
         self.current_token = Token(value)
         if self.current_token.token_type == INVALID:
             self.errors.append(
-                {self.line_num, f"Invalid token {self.current_token.value}"})
+                {'line_num': self.line_num, 'error': f"Invalid token {self.current_token.value}"})
         return self.current_token
 
     def get_current_token(self):

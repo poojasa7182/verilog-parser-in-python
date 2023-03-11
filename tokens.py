@@ -60,6 +60,8 @@ DISPLAY = '$display'
 LSHIFT = '<<'
 RSHIFT = '>>'
 NEWLINE = '\n'
+BOOL_OP = 'bop'
+ADV_TIME = 'adt'
 
 # regex for various kind of tokens
 TOKENS = [
@@ -92,7 +94,9 @@ TOKENS = [
     (INT, r'-?\d*\'[hH][0-9a-fA-F][0-9a-fA-F_]*'),
     (INT, r'-?\d*\'[dD][0-9]*'),
     (IDENTIFIER, r'[a-zA-Z_][a-zA-Z0-9_$]*'),
-    (OPERATOR, r'[+\-*/%^]'),
+    (OPERATOR, r'[+\-*/%]'),
+    (BOOL_OP, r'[~&\|^]'),
+    (ADV_TIME, r'#[\d]+'),
     (LPAREN, r'\('),
     (RPAREN, r'\)'),
     (LBRACE, r'\{'),

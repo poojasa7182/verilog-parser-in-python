@@ -1,2 +1,8 @@
 module mymodule(input [7:0] a, output [7:0] b);
+    wire [7:0] a; /*ddc*/
+    wire a;
+    input wire [8*70] a;
+    reg b = "Hello";
+    integer a = b << c 
+    assign a = b | (c & d);
 endmodule
