@@ -296,6 +296,20 @@ class VerilogSyntaxAnalyser:
             return
         pass
 
+    def parse_display_declarartion(self):
+        if self.lexer.get_next_token().token_type != LPAREN:
+            self.raise_error('Expected "(" after $display declaration')
+            return
+        while self.lexer.get_current_token().token_type != RPAREN:
+            if self.lexer.get_next_token().token_type not in [STRING, IDENTIFIER]:
+                self.raise_error('Expected string or identifier in $display declaration')
+                return
+            if self.lexer.get_next_token().token_type == COMMA:
+                continue
+            elif self.lexer.get_current_token().token_type != RPAREN:
+                self.raise_error(f'Expected \',\' or \')\' in $display declaration after {self.lexer.last_token.value}')
+                return
+
     def parse_net_declaration(self):
         if self.error:
             return
@@ -462,6 +476,8 @@ class VerilogSyntaxAnalyser:
                 id = self.parse_identifier_declaration()
             elif token == ASSIGN:
                 self.parse_assign_declaration()
+            elif token == DISPLAY:
+                self.parse_display_declarartion()
             elif token == EVENT:
                 self.parse_event_declaration()
             elif token == GATE_INSTANTIATION:
@@ -483,7 +499,6 @@ class VerilogSyntaxAnalyser:
             elif token == EOF:
                 break
             else:
-                print(self.lexer.last_token.value)
                 self.raise_error(
                     f'Unexpected token "{token}" in module declaration')
             if self.lexer.get_current_token().token_type == NEWLINE:

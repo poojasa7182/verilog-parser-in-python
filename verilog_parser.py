@@ -12,13 +12,21 @@ class VerilogParser:
         self.parser = VerilogSyntaxAnalyser(code)
 
     def tokenize(self):
+        file_tokens = open("symbol_table.txt", "w")
+        file_tokens.write('TOKEN')
+        file_tokens.write('\t\t\t')
+        file_tokens.write('TOKEN TYPE')
+        file_tokens.write('\n')
+        file_tokens.write('\n')
         while True:
             token = self.lexer.get_next_token()
             if token.token_type is EOF:
                 break
             if token.token_type != NEWLINE:
-                pass
-                print(token.value, '->', token.token_type)
+                file_tokens.write(token.value)
+                file_tokens.write('\t\t\t\t')
+                file_tokens.write(token.token_type)
+                file_tokens.write('\n')
         print("comments:", self.lexer.comments)
 
         return self.lexer.errors, self.lexer.comments
