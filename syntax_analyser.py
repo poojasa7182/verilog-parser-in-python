@@ -35,9 +35,9 @@ class VerilogSyntaxAnalyser:
             return
 
         while self.lexer.get_next_token().token_type == NEWLINE:
-            self.line_num +=1
+            self.line_num += 1
 
-        if self.lexer.get_current_token().token_type == EOF :
+        if self.lexer.get_current_token().token_type == EOF:
             self.eof = True
             return
 
@@ -50,6 +50,7 @@ class VerilogSyntaxAnalyser:
             return
 
         self.current_module = self.lexer.get_current_token().value
+        self.module_functions[self.current_module] = []
 
         self.parse_port_list()
         if self.error:
@@ -315,7 +316,27 @@ class VerilogSyntaxAnalyser:
     def parse_module_instantiation(self):
         if self.error:
             return
-        pass
+        if self.lexer.get_next_token().token_type != IDENTIFIER:
+            self.raise_error('Expected identifier for module instantiation')
+            return
+        if self.lexer.get_next_token().token_type != LPAREN:
+            self.raise_error('Expected "(" after module instantiation')
+            return
+        while self.lexer.get_current_token().token_type != RPAREN:
+            if self.lexer.get_next_token().token_type != IDENTIFIER:
+                self.raise_error(
+                    'Expected string or identifier in module instantiation')
+                return
+            if self.lexer.get_next_token().token_type == COMMA:
+                continue
+            elif self.lexer.get_current_token().token_type != RPAREN:
+                self.raise_error(
+                    f'Expected \',\' or \')\' in module instantiation after {self.lexer.last_token.value}')
+                return
+        if self.lexer.get_next_token().token_type != SEMICOLON:
+            self.raise_error(
+                'Expected ; after $display declaration')
+            return
 
     def parse_initial_statement(self):
         if self.error:
@@ -477,11 +498,7 @@ class VerilogSyntaxAnalyser:
             return
         function_name = token.value
 
-        if self.module_functions.get(self.current_module) == None:
-            self.module_functions[self.current_module] = []
         self.module_functions[self.current_module].append(function_name)
-        # print(self.module_functions[self.current_module])
-        # print(function_name)
 
         self.parse_port_list()
         if self.error:
@@ -571,24 +588,25 @@ class VerilogSyntaxAnalyser:
                 self.parse_basic_gates(2)
             elif token == NOT:
                 self.parse_basic_gates(1)
+            elif token == FUNCTION:
+                self.parse_function_declaration()
+            elif token == IDENTIFIER:
+                if self.lexer.get_current_token().value in self.module_functions.keys():
+                    self.parse_module_instantiation()
+                else:
+                    self.parse_identifier_declaration()
             elif token == EVENT:
                 self.parse_event_declaration()
             elif token == GATE_INSTANTIATION:
                 self.parse_gate_instantiation()
             elif token == UDP_INSTANTIATION:
                 self.parse_udp_instantiation()
-            elif token == MODULE_INSTANTIATION:
-                self.parse_module_instantiation()
             elif token == INITIAL_STATEMENT:
                 self.parse_initial_statement()
             elif token == ALWAYS_STATEMENT:
                 self.parse_always_statement()
             elif token == TASK:
                 self.parse_task_declaration()
-            elif token == FUNCTION:
-                self.parse_function_declaration()
-            elif token == IDENTIFIER:
-                self.parse_identifier_declaration()
             elif token == EOF:
                 self.eof = True
                 break
@@ -608,4 +626,7 @@ class VerilogSyntaxAnalyser:
             module_body = self.parse_module_body()
             if self.lexer.get_current_token().token_type == EOF:
                 break
+        all_modules = self.module_functions.keys()
+        for module in all_modules:
+            print(module, ": functions =>", self.module_functions[module])
         return self.errors, self.hware_specifications

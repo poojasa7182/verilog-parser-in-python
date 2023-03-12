@@ -4,7 +4,7 @@ from tokens import *
 
 class HardwareSpecification:
     '''
-    Class to represent a hardware specification
+    Class to represent hardware specifications in a file
     '''
 
     def __init__(self):
