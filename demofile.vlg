@@ -14,6 +14,6 @@ module mymodule(input [7:0] a, output [7:0] b);
 endmodule
 
 module m2;
-    mymodule m6;
+    mymodule m6();
 endmodule
 

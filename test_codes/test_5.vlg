@@ -1,0 +1,19 @@
+module mymodule(input [7:0] a, output [7:0] b);
+    wire [7:0] a; /*ddc*/
+    input wire [8*70] a;
+    reg a = "Hello";
+    integer a = b << c ;
+    assign a = b | (c & d);
+    $display("hgdjfd",a);
+    AND(c, h, k);
+    c = NOT(c, k);
+    function d;
+    endfunction
+    function c;
+    endfunction
+endmodule
+
+module m2;
+    mymodule m6();
+endmodule
+
