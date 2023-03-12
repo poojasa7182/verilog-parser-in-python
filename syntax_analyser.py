@@ -14,6 +14,10 @@ class VerilogSyntaxAnalyser:
         self.error = False
         self.errors = []
         self.hware_specifications = HardwareSpecification()
+        self.modules = set()
+        self.module_functions = {}
+        self.current_module = None
+        self.eof = False
 
     def raise_error(self, error):
         self.error = True
@@ -22,22 +26,30 @@ class VerilogSyntaxAnalyser:
             'error': error,
         })
         token = self.lexer.get_next_token()
-        while token.token_type != NEWLINE:
+        while token.token_type not in [NEWLINE, EOF]:
             token = self.lexer.get_next_token()
         return
 
     def parse_module_declaration(self):
         if self.error:
             return
-        if self.lexer.get_next_token().token_type != MODULE:
+
+        while self.lexer.get_next_token().token_type == NEWLINE:
+            self.line_num +=1
+
+        if self.lexer.get_current_token().token_type == EOF :
+            self.eof = True
+            return
+
+        if self.lexer.get_current_token().token_type != MODULE:
             self.raise_error('Expected "module" keyword')
             return
 
-        identifier = self.lexer.get_next_token()
-
-        if identifier.value[0].isnumeric():
-            self.raise_error('Module identifier must not start with a number')
+        if self.lexer.get_next_token().token_type != IDENTIFIER:
+            self.raise_error('Expected module identifier')
             return
+
+        self.current_module = self.lexer.get_current_token().value
 
         self.parse_port_list()
         if self.error:
@@ -192,11 +204,13 @@ class VerilogSyntaxAnalyser:
         if self.error:
             return
         if data_type in [REAL, TIME, INTEGER]:
-            self.raise_error('real, time, Integer data types not declared with input, output or inout')
+            self.raise_error(
+                'real, time, Integer data types not declared with input, output or inout')
             return
-        
-        result = self.hware_specifications.add_hardware(identifier, data_type, direction)
-        if result['error'] :
+
+        result = self.hware_specifications.add_hardware(
+            identifier, data_type, direction)
+        if result['error']:
             self.raise_error(result['reason'])
             return
 
@@ -218,7 +232,13 @@ class VerilogSyntaxAnalyser:
         identifier = self.lexer.get_current_token().value
 
         if self.lexer.get_next_token().token_type == EQUALS:
-            self.parse_complex_num_expression()
+            token = self.lexer.get_next_token()
+            if token.token_type in [AND, OR, XOR]:
+                self.parse_basic_gates(2)
+            elif token.token_type in [NOT]:
+                self.parse_basic_gates(1)
+            else:
+                self.parse_complex_num_expression()
             if self.error:
                 return
         if self.lexer.get_current_token().token_type != SEMICOLON:
@@ -231,7 +251,7 @@ class VerilogSyntaxAnalyser:
         if self.error:
             return
         expression = []
-        token = self.lexer.get_next_token()
+        token = self.lexer.get_current_token()
         lparam_count = 0
         while not (token.token_type == NEWLINE or token.token_type == SEMICOLON):
             if token.token_type == IDENTIFIER or token.token_type == INT or token.token_type == STRING:
@@ -318,13 +338,19 @@ class VerilogSyntaxAnalyser:
             return
         while self.lexer.get_current_token().token_type != RPAREN:
             if self.lexer.get_next_token().token_type not in [STRING, IDENTIFIER]:
-                self.raise_error('Expected string or identifier in $display declaration')
+                self.raise_error(
+                    'Expected string or identifier in $display declaration')
                 return
             if self.lexer.get_next_token().token_type == COMMA:
                 continue
             elif self.lexer.get_current_token().token_type != RPAREN:
-                self.raise_error(f'Expected \',\' or \')\' in $display declaration after {self.lexer.last_token.value}')
+                self.raise_error(
+                    f'Expected \',\' or \')\' in $display declaration after {self.lexer.last_token.value}')
                 return
+        if self.lexer.get_next_token().token_type != SEMICOLON:
+            self.raise_error(
+                'Expected ; after $display declaration')
+            return
 
     def parse_net_declaration(self):
         if self.error:
@@ -333,12 +359,12 @@ class VerilogSyntaxAnalyser:
         identifier = self.parse_identifier()
         if self.error:
             return
-        
+
         result = self.hware_specifications.add_hardware(identifier, WIRE, None)
-        if result['error'] :
+        if result['error']:
             self.raise_error(result['reason'])
             return
-        
+
         if self.lexer.get_next_token().token_type != SEMICOLON:
             self.raise_error('Expected ";" after wire declaration')
             return
@@ -350,12 +376,12 @@ class VerilogSyntaxAnalyser:
             return
         self.parse_data_type()
         identifier = self.parse_identifier()
-        
+
         result = self.hware_specifications.add_hardware(identifier, REG, None)
-        if result['error'] :
+        if result['error']:
             self.raise_error(result['reason'])
             return
-        
+
         if self.error:
             return
         if self.lexer.get_next_token().token_type == EQUALS:
@@ -451,11 +477,17 @@ class VerilogSyntaxAnalyser:
             return
         function_name = token.value
 
+        if self.module_functions.get(self.current_module) == None:
+            self.module_functions[self.current_module] = []
+        self.module_functions[self.current_module].append(function_name)
+        # print(self.module_functions[self.current_module])
+        # print(function_name)
+
         self.parse_port_list()
         if self.error:
             return
 
-        if self.lexer.get_next_token().token_type != SEMICOLON:
+        if self.lexer.get_current_token().token_type != SEMICOLON:
             self.raise_error('Expected ";" after function declaration')
             return
 
@@ -467,12 +499,41 @@ class VerilogSyntaxAnalyser:
             if token is None:
                 self.raise_error('Unexpected end of input')
                 return
-            elif token == ENDFUNCTION:
+            elif token.token_type == NEWLINE:
+                self.line_num += 1
+            elif token.token_type == ENDFUNCTION:
                 break
             else:
                 function_body.append(token)
 
+    def parse_basic_gates(self, inp):
+        gate_type = self.lexer.get_current_token().token_type
+        var = inp+1
+        if self.lexer.get_next_token().token_type != LPAREN:
+            self.raise_error('Expected \'(\' after gate declaration')
+            return
+        while var > 0:
+            if self.lexer.get_next_token().token_type != IDENTIFIER:
+                self.raise_error('Expected identifier in gate declaration')
+                return
+            var -= 1
+            token = self.lexer.get_next_token()
+            if var > 0 and token.token_type != COMMA:
+                self.raise_error(
+                    'Expected , after identifier in gate declaration')
+                return
+            if var == 0 and token.token_type != RPAREN:
+                self.raise_error(
+                    'Expected ) after identifier in gate declaration')
+                return
+        if self.lexer.get_next_token().token_type != SEMICOLON:
+            self.raise_error('Expected ; after gate declaration')
+            return
+
     def parse_module_body(self):
+        if self.lexer.get_current_token().token_type == EOF:
+            self.eof = True
+            return
         while True:
             token = self.lexer.get_next_token().token_type
             if token is None:
@@ -506,6 +567,10 @@ class VerilogSyntaxAnalyser:
                 self.parse_assign_declaration()
             elif token == DISPLAY:
                 self.parse_display_declarartion()
+            elif token == AND or token == XOR or token == OR:
+                self.parse_basic_gates(2)
+            elif token == NOT:
+                self.parse_basic_gates(1)
             elif token == EVENT:
                 self.parse_event_declaration()
             elif token == GATE_INSTANTIATION:
@@ -525,6 +590,7 @@ class VerilogSyntaxAnalyser:
             elif token == IDENTIFIER:
                 self.parse_identifier_declaration()
             elif token == EOF:
+                self.eof = True
                 break
             else:
                 self.raise_error(
@@ -535,6 +601,11 @@ class VerilogSyntaxAnalyser:
                 continue
 
     def parse_verilog_code(self):
-        module_declaration = self.parse_module_declaration()
-        module_body = self.parse_module_body()
+        while not self.eof:
+            module_declaration = self.parse_module_declaration()
+            if self.eof:
+                break
+            module_body = self.parse_module_body()
+            if self.lexer.get_current_token().token_type == EOF:
+                break
         return self.errors, self.hware_specifications

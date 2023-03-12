@@ -64,6 +64,11 @@ BOOL_OP = 'bop'
 NEWLINE = '\n'
 EOF = 'eof'
 
+NOT = 'NOT'
+AND = 'AND'
+OR = 'OR'
+XOR = 'XOR'
+
 # regex for various kind of tokens
 TOKENS = [
     (MODULE, r'module'),
@@ -78,16 +83,20 @@ TOKENS = [
     (WHILE, r'while'),
     (FOR, r'for'),
     (BEGIN, r'begin'),
-    (END, r'end'),
-    (CASE, r'case'),
-    (ENDCASE, r'endcase'),
-    (DEFAULT, r'default'),
     (FUNCTION, r'function'),
     (ENDFUNCTION, r'endfunction'),
+    (ENDCASE, r'endcase'),
+    (END, r'end'),
+    (CASE, r'case'),
+    (DEFAULT, r'default'),
     (INTEGER, r'integer'),
     (REAL, r'real'),
     (TIME, r'time'),
     (DISPLAY, r'\$display'),
+    (NOT, r'NOT'),
+    (AND, r'AND'),
+    (OR, r'OR'),
+    (XOR, r'XOR'),
     (INT, r'-?\d+'),
     (INT, r'-?0x[\d]+'),
     (INT, r'-?\d*\'b[0-1]*'),
