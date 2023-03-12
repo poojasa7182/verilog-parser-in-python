@@ -5,12 +5,7 @@ Define Verilog tokens and module item types
 # token types
 MODULE = 'module'
 ENDMODULE = 'endmodule'
-IDENTIFIER = 'identifier'
 PORT = 'port'
-SEMICOLON = 'semicolon'
-LRANGE = 'left_range_bracket'
-RRANGE = 'right_range_bracket'
-COLON = 'colon'
 
 # Define module item types
 PARAMETER = 'parameter'
@@ -43,25 +38,31 @@ END = 'end'
 CASE = 'case'
 ENDCASE = 'endcase'
 DEFAULT = 'default'
+DISPLAY = '$display'
+IDENTIFIER = 'identifier'
+INT = 'int'
+STRING = 'str'
+INVALID = 'inv'
+ADV_TIME = 'adt'
 
 #symbols, operators and delimiters
-OPERATOR = 'ops'
+
 COMMA = 'comma'
 LPAREN = 'left_paranthesis'
 RPAREN = 'right_paranthesis'
 LBRACE = 'left_brace'
 RBRACE = 'right_brace'
 EQUALS = 'equal_to'
-INT = 'int'
-EOF = 'eof'
-STRING = 'str'
-INVALID = 'inv'
-DISPLAY = '$display'
+SEMICOLON = 'semicolon'
+COLON = 'colon'
+LRANGE = 'left_range_bracket'
+RRANGE = 'right_range_bracket'
+OPERATOR = 'ops'
 LSHIFT = 'left_shift'
 RSHIFT = 'right_shift'
-NEWLINE = '\n'
 BOOL_OP = 'bop'
-ADV_TIME = 'adt'
+NEWLINE = '\n'
+EOF = 'eof'
 
 # regex for various kind of tokens
 TOKENS = [

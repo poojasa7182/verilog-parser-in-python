@@ -1,4 +1,5 @@
 from tokens import *
+from hardware_specification import *
 from lexical_analyser import *
 
 
@@ -12,6 +13,7 @@ class VerilogSyntaxAnalyser:
         self.line_num = 1
         self.error = False
         self.errors = []
+        self.hware_specifications = HardwareSpecification()
 
     def raise_error(self, error):
         self.error = True
@@ -54,24 +56,27 @@ class VerilogSyntaxAnalyser:
         if self.lexer.get_current_token().token_type in [REAL, TIME, INTEGER]:
             data_type = self.lexer.get_current_token().value
             self.lexer.get_next_token()
+            return data_type
         elif self.lexer.get_current_token().token_type in [REG, WIRE]:
             data_type = self.lexer.get_current_token().value
             if self.lexer.get_next_token().token_type == LRANGE:
-                self.parse_expression()
+                dimensions = self.parse_expression()
                 if self.error:
                     return
                 if self.lexer.get_current_token().token_type != RRANGE:
                     self.raise_error('Expected "]" after array dimension')
                     return
                 self.lexer.get_next_token()
+            return data_type
         elif self.lexer.get_current_token().token_type == LRANGE:
-            self.parse_expression()
+            dimesions = self.parse_expression()
             if self.error:
                 return
             if self.lexer.get_current_token().token_type != RRANGE:
                 self.raise_error('Expected "]" after array dimension')
                 return
             self.lexer.get_next_token()
+            return None
         else:
             return
 
@@ -175,14 +180,25 @@ class VerilogSyntaxAnalyser:
             return
         dimensions.append(self.lexer.get_current_token().value)
         self.lexer.get_next_token()
-        return
+        return dimensions
 
     def parse_in_out_declaration(self):
         if self.error:
             return
+        direction = self.lexer.get_current_token().value
         self.lexer.get_next_token()
-        self.parse_data_type()
-        self.parse_identifier()
+        data_type = self.parse_data_type()
+        identifier = self.parse_identifier()
+        if self.error:
+            return
+        if data_type in [REAL, TIME, INTEGER]:
+            self.raise_error('real, time, Integer data types not declared with input, output or inout')
+            return
+        
+        result = self.hware_specifications.add_hardware(identifier, data_type, direction)
+        if result['error'] :
+            self.raise_error(result['reason'])
+            return
 
         return
 
@@ -194,7 +210,7 @@ class VerilogSyntaxAnalyser:
             return
         identifier = self.lexer.get_current_token().value
 
-        return
+        return identifier
 
     def parse_identifier_declaration(self):
         if self.error:
@@ -314,9 +330,15 @@ class VerilogSyntaxAnalyser:
         if self.error:
             return
         self.parse_data_type()
-        self.parse_identifier()
+        identifier = self.parse_identifier()
         if self.error:
             return
+        
+        result = self.hware_specifications.add_hardware(identifier, WIRE, None)
+        if result['error'] :
+            self.raise_error(result['reason'])
+            return
+        
         if self.lexer.get_next_token().token_type != SEMICOLON:
             self.raise_error('Expected ";" after wire declaration')
             return
@@ -327,7 +349,13 @@ class VerilogSyntaxAnalyser:
         if self.error:
             return
         self.parse_data_type()
-        self.parse_identifier()
+        identifier = self.parse_identifier()
+        
+        result = self.hware_specifications.add_hardware(identifier, REG, None)
+        if result['error'] :
+            self.raise_error(result['reason'])
+            return
+        
         if self.error:
             return
         if self.lexer.get_next_token().token_type == EQUALS:
@@ -509,4 +537,4 @@ class VerilogSyntaxAnalyser:
     def parse_verilog_code(self):
         module_declaration = self.parse_module_declaration()
         module_body = self.parse_module_body()
-        return self.errors
+        return self.errors, self.hware_specifications
