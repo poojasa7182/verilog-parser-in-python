@@ -234,12 +234,7 @@ class VerilogSyntaxAnalyser:
 
         if self.lexer.get_next_token().token_type == EQUALS:
             token = self.lexer.get_next_token()
-            if token.token_type in [AND, OR, XOR]:
-                self.parse_basic_gates(2)
-            elif token.token_type in [NOT]:
-                self.parse_basic_gates(1)
-            else:
-                self.parse_complex_num_expression()
+            self.parse_complex_num_expression()
             if self.error:
                 return
         if self.lexer.get_current_token().token_type != SEMICOLON:

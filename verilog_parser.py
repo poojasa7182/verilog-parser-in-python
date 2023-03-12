@@ -14,7 +14,7 @@ class VerilogParser:
 
     def tokenize(self):
         file_tokens = open("symbol_table.txt", "w")
-        file_tokens.write('TOKEN\t\t\tTOKEN TYPE\n\n')
+        file_tokens.write('LEXEME\t\t\tTOKEN TYPE\n\n')
         while True:
             token = self.lexer.get_next_token()
             if token.token_type is EOF:
@@ -52,6 +52,10 @@ class VerilogParser:
             all_identifiers = set(hardware_specifications.type_dict.keys(
             ) | hardware_specifications.direction_dict.keys())
             for identiier in all_identifiers:
+                if hardware_specifications.type_dict.get(identiier)==None:
+                    hardware_specifications.type_dict[identiier] = 'null'
+                if hardware_specifications.direction_dict.get(identiier)==None:
+                    hardware_specifications.direction_dict[identiier] = 'null'
                 file_hware_specifications.write(
                     f"{identiier}\t\t\t\t{hardware_specifications.type_dict[identiier]}\t\t\t{hardware_specifications.direction_dict[identiier]}\n")
             print("Hardware specifications listed in hardware_specifications.txt")
@@ -66,7 +70,7 @@ class VerilogParser:
 
 
 def main():
-    code_file = "demofile.vlg"
+    code_file = "test_codes/test_3.vlg"
     f = open(code_file, "r")
     lex_obj = VerilogParser(f.read())
     lex_obj.parse()

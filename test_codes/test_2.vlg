@@ -1,0 +1,11 @@
+module mymodule(inpu [7:0] a, output [7:0] b);
+    func c;
+    $a = g$hh 
+    b = "hello 
+        frgr"
+endmodule
+
+module m2;
+    mymodule m6;
+endmodule
+
